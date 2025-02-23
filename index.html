@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Teachable Machine Image Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
+        #webcam-container { margin-top: 20px; display: flex; justify-content: center; }
+        .btn { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; border-radius: 5px; }
+        .start-btn { background-color: #28a745; color: white; border: none; }
+        .stop-btn { background-color: #dc3545; color: white; border: none; }
+        .prediction { font-size: 18px; margin-top: 10px; }
+        video { width: 100%; max-width: 400px; height: auto; }
+    </style>
+</head>
+<body>
+    <h1>Teachable Machine Image Model</h1>
+    <button class="btn start-btn" onclick="init()">Start</button>
+    <button class="btn stop-btn" onclick="stopWebcam()">Stop</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+    <script>
+        const URL = "https://teachablemachine.withgoogle.com/models/YDCxCA-ep/";
+        let model, webcam, labelContainer, maxPredictions, isRunning = false;
+
+        async function init() {
+            if (isRunning) return;
+            isRunning = true;
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            webcam = new tmImage.Webcam(300, 300, true);
+            await webcam.setup({ facingMode: "environment" });
+            await webcam.play();
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = "";
+            for (let i = 0; i < maxPredictions; i++) {
+                let div = document.createElement("div");
+                div.className = "prediction";
+                labelContainer.appendChild(div);
+            }
+            window.requestAnimationFrame(loop);
+        }
+
+        async function loop() {
+            if (!isRunning) return;
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.childNodes[i].innerHTML = `${prediction[i].className}: ${prediction[i].probability.toFixed(2)}`;
+            }
+        }
+
+        function stopWebcam() {
+            if (webcam) {
+                webcam.stop();
+                document.getElementById("webcam-container").innerHTML = "";
+                isRunning = false;
+            }
+        }
+    </script>
+</body>
+</html>
+
+
